@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Smart-Doc AI | Intelligent Document Assistant",
+  title: "DocMind AI | Intelligent Document Assistant",
   description: "AI-powered document summarization, correction, and generation",
 };
 
