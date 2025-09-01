@@ -19,7 +19,7 @@ export default function AITools() {
   const features = [
     {
       id: "summarize",
-      title: "AI Summarization",
+      title: "Summarization",
       icon: "📄",
       description: "Transform lengthy documents into concise summaries",
     },
@@ -31,7 +31,7 @@ export default function AITools() {
     },
     {
       id: "suggest",
-      title: "AI Suggestions",
+      title: "Suggestions Generation",
       icon: "💡",
       description: "Get intelligent writing suggestions",
     },
@@ -252,7 +252,7 @@ export default function AITools() {
 
           {/* Output Area */}
           <div className={styles.outputSection}>
-            <h2>AI Output</h2>
+            <h2>Output</h2>
             <div className={styles.outputArea}>
               {isLoading ? (
                 <div className={styles.loading}>
@@ -270,9 +270,7 @@ export default function AITools() {
       </main>
 
       <footer className={styles.footer}>
-        <p>
-          © 2024 Smart-Doc AI. This is a prototype for competition submission.
-        </p>
+        <p>© 2025 DocMind AI. Own by NAK4S.</p>
       </footer>
     </div>
   );
