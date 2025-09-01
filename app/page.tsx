@@ -60,17 +60,24 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error("API request failed");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "API request failed");
       }
 
       const data = await response.json();
 
       if (data.success) {
         setOutputText(data.result);
+      } else {
+        throw new Error(data.error || "Unknown error");
       }
     } catch (error) {
       console.error("Error:", error);
-      setOutputText("An error occurred while processing your request.");
+      setOutputText(
+        `Error: ${
+          error instanceof Error ? error.message : "Unknown error occurred"
+        }`
+      );
     } finally {
       setIsLoading(false);
     }

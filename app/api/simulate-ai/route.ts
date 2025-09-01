@@ -1,33 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const { feature, text } = await request.json();
+    const { feature, text: inputText } = await request.json();
 
     // Validate request
-    if (!feature || !text) {
+    if (!feature || !inputText) {
       return NextResponse.json(
         { error: "Feature and text are required" },
         { status: 400 }
       );
     }
 
-    // Simulate AI processing delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: "OpenAI API key not configured" },
+        { status: 500 }
+      );
+    }
 
-    // Mock responses for each feature
-    const mockResponses: Record<string, string> = {
-      summarize:
-        "This is a summarized version of your text. The main points have been extracted while preserving the core meaning and essential information. The AI has identified key concepts and presented them in a concise format that maintains the original context and intent.",
-      autocorrect:
-        "Your text has been corrected for grammar and spelling. The corrections maintain your original intent while improving readability. The AI has also enhanced sentence structure for better flow and clarity, ensuring your message is communicated effectively.",
-      suggest:
-        "Based on your content, I suggest:\n\n1. Consider adding an introduction to provide context\n2. Expand on the second point with specific examples\n3. Use more descriptive language in the conclusion\n4. Include data or statistics to support your claims\n5. Consider breaking long paragraphs into shorter ones for better readability",
-      generate:
-        "Based on your input, I've generated this enhanced content. The structure follows best practices for this type of document while incorporating your key ideas. The AI has expanded on your concepts with additional insights and organized the information in a logical flow that engages readers and effectively communicates your message.",
+    // Define prompts for each feature
+    const prompts: Record<string, string> = {
+      summarize: `Please summarize the following text concisely while preserving the main points and essential information: ${inputText}`,
+      autocorrect: `Correct any grammar, spelling, and punctuation errors in the following text. Maintain the original intent and improve readability: ${inputText}`,
+      suggest: `Provide specific, actionable suggestions to improve the following text. Format as a numbered list: ${inputText}`,
+      generate: `Based on the following input, generate enhanced content that follows best practices for this type of document: ${inputText}`,
     };
 
-    const result = mockResponses[feature] || "AI output will appear here.";
+    const systemPrompts: Record<string, string> = {
+      summarize:
+        "You are a helpful assistant that summarizes text concisely while preserving key information.",
+      autocorrect:
+        "You are a grammar correction assistant. Return only the corrected text without additional commentary.",
+      suggest:
+        "You are a writing improvement assistant. Provide specific suggestions in a clear, numbered list format.",
+      generate:
+        "You are a content generation assistant. Create well-structured, coherent content based on the user's input.",
+    };
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompts[feature] || "You are a helpful assistant.",
+        },
+        {
+          role: "user",
+          content: prompts[feature] || inputText,
+        },
+      ],
+      max_tokens: 1000,
+      temperature: 0.7,
+    });
+
+    const result =
+      response.choices[0]?.message?.content || "No response generated.";
 
     return NextResponse.json({
       result,
@@ -36,13 +70,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error in simulate-ai API:", error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: "Failed to process request with AI" },
       { status: 500 }
     );
   }
 }
 
-// Add OPTIONS handler for CORS preflight requests
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
