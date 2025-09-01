@@ -9,7 +9,7 @@ export default function Home() {
       <header className={styles.header}>
         <div className={styles.logo}>
           <span className={styles.logoIcon}>🧠</span>
-          <span>Smart-Doc AI</span>
+          <span>DocMind AI</span>
         </div>
         <nav>
           <ul>
@@ -37,26 +37,26 @@ export default function Home() {
       <section className={styles.hero}>
         <h1>Revolutionize Your Document Workflow</h1>
         <p>
-          Smart-Doc AI uses advanced artificial intelligence to summarize,
-          correct, suggest, and generate content—making your writing process
-          smarter and more efficient.
+          DocMind uses advanced artificial intelligence to summarize, correct,
+          suggest, and generate content—making your writing process smarter and
+          more efficient.
         </p>
         <Link href="/ai">
           <button
             className={`${styles.btn} ${styles.btnPrimary} ${styles.heroBtn}`}
           >
-            Get Started Free
+            Get Started
           </button>
         </Link>
       </section>
 
       <>
         <section id="features" className={styles.featuresSection}>
-          <h2>Powerful Features</h2>
+          <h2>Features</h2>
           <div className={styles.features}>
             <div className={styles.featureCard}>
               <div className={styles.featureIcon}>📄</div>
-              <h3>AI Summarization</h3>
+              <h3>Summarization</h3>
               <p>
                 Transform lengthy documents into concise summaries with our
                 advanced AI algorithms.
@@ -72,7 +72,7 @@ export default function Home() {
             </div>
             <div className={styles.featureCard}>
               <div className={styles.featureIcon}>💡</div>
-              <h3>AI Suggestions</h3>
+              <h3>Suggestions Generation</h3>
               <p>
                 Get intelligent writing suggestions to enhance your content and
                 improve clarity.
@@ -90,9 +90,7 @@ export default function Home() {
         </section>
 
         <footer className={styles.footer}>
-          <p>
-            © 2024 Smart-Doc AI. This is a prototype for competition submission.
-          </p>
+          <p>© 2025 DocMind. Own by NAK4S.</p>
         </footer>
       </>
     </div>
