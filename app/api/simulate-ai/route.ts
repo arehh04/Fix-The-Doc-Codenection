@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-// Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(request: NextRequest) {
   try {
-    const { feature, text: inputText } = await request.json();
+    const { feature, text, uploadType } = await request.json();
 
-    // Validate request
-    if (!feature || !inputText) {
+    if (!feature) {
       return NextResponse.json(
-        { error: "Feature and text are required" },
+        { error: "Feature is required" },
         { status: 400 }
       );
     }
@@ -25,23 +23,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Define prompts for each feature
-    const prompts: Record<string, string> = {
-      summarize: `Please summarize the following text concisely while preserving the main points and essential information: ${inputText}`,
-      autocorrect: `Correct any grammar, spelling, and punctuation errors in the following text. Maintain the original intent and improve readability: ${inputText}`,
-      suggest: `Provide specific, actionable suggestions to improve the following text. Format as a numbered list: ${inputText}`,
-      generate: `Based on the following input, generate enhanced content that follows best practices for this type of document: ${inputText}`,
+    // Different prompts based on upload type
+    const uploadContext: Record<string, string> = {
+      text: "the following text",
+      file: "the content from the uploaded file",
+      drive: "the document from Google Drive",
+      link: "the content from the web link",
     };
 
-    const systemPrompts: Record<string, string> = {
-      summarize:
-        "You are a helpful assistant that summarizes text concisely while preserving key information.",
-      autocorrect:
-        "You are a grammar correction assistant. Return only the corrected text without additional commentary.",
-      suggest:
-        "You are a writing improvement assistant. Provide specific suggestions in a clear, numbered list format.",
-      generate:
-        "You are a content generation assistant. Create well-structured, coherent content based on the user's input.",
+    const prompts: Record<string, string> = {
+      summarize: `Please summarize ${
+        uploadContext[uploadType || "text"]
+      } concisely while preserving the main points: ${text}`,
+      autocorrect: `Correct any grammar, spelling, and punctuation errors in ${
+        uploadContext[uploadType || "text"]
+      }. Maintain the original intent: ${text}`,
+      suggest: `Provide specific, actionable suggestions to improve ${
+        uploadContext[uploadType || "text"]
+      }. Format as a numbered list: ${text}`,
+      generate: `Based on ${
+        uploadContext[uploadType || "text"]
+      }, generate enhanced content: ${text}`,
     };
 
     const response = await openai.chat.completions.create({
@@ -49,11 +51,12 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: systemPrompts[feature] || "You are a helpful assistant.",
+          content:
+            "You are a helpful AI assistant that processes documents and text.",
         },
         {
           role: "user",
-          content: prompts[feature] || inputText,
+          content: prompts[feature] || text,
         },
       ],
       max_tokens: 1000,
@@ -74,15 +77,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  });
 }
