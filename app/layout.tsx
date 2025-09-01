@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "DocMind AI | Intelligent Document Assistant",
-  description: "AI-powered document summarization, correction, and generation",
+  description: "AI-powered tool for your document needs.",
 };
 
 export default function RootLayout({

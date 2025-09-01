@@ -12,7 +12,7 @@ export default function Home() {
   const features = [
     {
       id: "summarize",
-      title: "AI Summarization",
+      title: "Summarization",
       icon: "📄",
       description:
         "Transform lengthy documents into concise summaries with our advanced AI algorithms.",
@@ -26,7 +26,7 @@ export default function Home() {
     },
     {
       id: "suggest",
-      title: "AI Suggestions",
+      title: "Suggestions",
       icon: "💡",
       description:
         "Get intelligent writing suggestions to enhance your content and improve clarity.",
@@ -110,19 +110,19 @@ export default function Home() {
       <section className={styles.hero}>
         <h1>Revolutionize Your Document Workflow</h1>
         <p>
-          Smart-Doc AI uses advanced artificial intelligence to summarize,
+          DocMind AI uses advanced artificial intelligence to summarize,
           correct, suggest, and generate content—making your writing process
           smarter and more efficient.
         </p>
         <button
           className={`${styles.btn} ${styles.btnPrimary} ${styles.heroBtn}`}
         >
-          Get Started Free
+          Get Started
         </button>
       </section>
 
       <section id="features" className={styles.featuresSection}>
-        <h2>Powerful Features</h2>
+        <h2>Features Includes</h2>
         <div className={styles.features}>
           {features.map((feature) => (
             <div key={feature.id} className={styles.featureCard}>
@@ -177,9 +177,7 @@ export default function Home() {
       </section>
 
       <footer className={styles.footer}>
-        <p>
-          © 2024 Smart-Doc AI. This is a prototype for competition submission.
-        </p>
+        <p>© 2025 DocMind AI. Own by NAK4S.</p>
       </footer>
     </div>
   );
