@@ -7,8 +7,8 @@
 }
 
 body {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  color: #333;
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  color: #2d3748;
   min-height: 100vh;
   font-family: "Poppins", sans-serif;
   line-height: 1.6;
@@ -16,4 +16,33 @@ body {
 
 html {
   scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #4a6cf7, #ff6b6b);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #3b5bdb, #ff5252);
+}
+
+/* Selection color */
+::selection {
+  background: rgba(74, 108, 247, 0.3);
+  color: #2d3748;
+}
+
+::-moz-selection {
+  background: rgba(74, 108, 247, 0.3);
+  color: #2d3748;
 }
