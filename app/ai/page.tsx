@@ -1,27 +1,33 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import styles from "./page.module.css";
 
+interface Message {
+  id: string;
+  text: string;
+  sender: "user" | "ai";
+  timestamp: Date;
+  files?: File[];
+}
+
 export default function AITools() {
-  const router = useRouter();
   const [inputText, setInputText] = useState("");
-  const [outputText, setOutputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeFeature, setActiveFeature] = useState("");
-  const [uploadOption, setUploadOption] = useState<
-    "text" | "file" | "drive" | "link"
-  >("text");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [conversationHistory, setConversationHistory] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const features = [
     {
       id: "summarize",
-      title: "Summarization",
+      title: "AI Summarization",
       icon: "📄",
-      description: "Transform lengthy documents into concise summaries",
+      description: "Transform documents into concise summaries",
     },
     {
       id: "autocorrect",
@@ -31,7 +37,7 @@ export default function AITools() {
     },
     {
       id: "suggest",
-      title: "Suggestions Generation",
+      title: "AI Suggestions",
       icon: "💡",
       description: "Get intelligent writing suggestions",
     },
@@ -41,17 +47,50 @@ export default function AITools() {
       icon: "🤖",
       description: "Generate high-quality content",
     },
+    {
+      id: "chat",
+      title: "AI Chat",
+      icon: "💬",
+      description: "Chat with AI about your documents",
+    },
   ];
 
-  const handleFeatureClick = async (featureId: string) => {
-    if (!inputText.trim() && uploadOption === "text") {
-      alert("Please enter some text first");
-      return;
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...files]);
+      setInputText(
+        (prev: string) =>
+          prev + `\n[Attached: ${files.map((f: File) => f.name).join(", ")}]`
+      );
     }
+  };
 
+  const removeFile = (fileName: string) => {
+    setSelectedFiles((prev) => prev.filter((f) => f.name !== fileName));
+    setInputText((prev) => prev.replace(`[Attached: ${fileName}]`, "").trim());
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputText.trim() && selectedFiles.length === 0) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: inputText,
+      sender: "user",
+      timestamp: new Date(),
+      files: [...selectedFiles],
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setConversationHistory((prev) => [...prev, inputText]);
+
+    const currentInput = inputText;
+    const currentFiles = [...selectedFiles];
+
+    setInputText("");
+    setSelectedFiles([]);
     setIsLoading(true);
-    setActiveFeature(featureId);
-    setOutputText("");
 
     try {
       const response = await fetch("/api/simulate-ai", {
@@ -60,9 +99,10 @@ export default function AITools() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          feature: featureId,
-          text: inputText,
-          uploadType: uploadOption,
+          feature: activeFeature || "chat",
+          text: currentInput,
+          files: currentFiles.map((f) => f.name),
+          conversationHistory,
         }),
       });
 
@@ -72,28 +112,46 @@ export default function AITools() {
 
       const data = await response.json();
 
-      if (data.success) {
-        setOutputText(data.result);
-      }
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: data.result,
+        sender: "ai",
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+      setConversationHistory((prev) => [...prev, data.result]);
     } catch (error) {
       console.error("Error:", error);
-      setOutputText("An error occurred while processing your request.");
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "An error occurred while processing your request.",
+        sender: "ai",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      // Here you would read the file content and set it to inputText
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setInputText(e.target?.result as string);
-      };
-      reader.readAsText(file);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
+  };
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const clearConversation = () => {
+    setMessages([]);
+    setConversationHistory([]);
   };
 
   return (
@@ -108,130 +166,20 @@ export default function AITools() {
             <li>
               <Link href="/">Home</Link>
             </li>
-            <li>
-              <a href="#features">Features</a>
-            </li>
-            <li>
-              <a href="#about">About</a>
-            </li>
           </ul>
         </nav>
-        <div className={styles.authButtons}>
-          <button className={`${styles.btn} ${styles.btnOutline}`}>
-            Sign In
-          </button>
-          <button className={`${styles.btn} ${styles.btnPrimary}`}>
-            Sign Up
-          </button>
-        </div>
       </header>
 
       <main className={styles.main}>
         <div className={styles.aiContainer}>
-          <h1>AI-Powered Document Tools</h1>
+          <h1>Smart Document Assistant</h1>
           <p className={styles.subtitle}>
-            Choose how you want to provide your content
+            Upload, chat, and transform your documents with AI
           </p>
-
-          {/* Upload Options Toggle */}
-          <div className={styles.uploadOptions}>
-            <button
-              className={`${styles.uploadOption} ${
-                uploadOption === "text" ? styles.active : ""
-              }`}
-              onClick={() => setUploadOption("text")}
-            >
-              📝 Direct Text
-            </button>
-            <button
-              className={`${styles.uploadOption} ${
-                uploadOption === "file" ? styles.active : ""
-              }`}
-              onClick={() => setUploadOption("file")}
-            >
-              📁 Upload File
-            </button>
-            <button
-              className={`${styles.uploadOption} ${
-                uploadOption === "drive" ? styles.active : ""
-              }`}
-              onClick={() => setUploadOption("drive")}
-            >
-              ☁ Google Drive
-            </button>
-            <button
-              className={`${styles.uploadOption} ${
-                uploadOption === "link" ? styles.active : ""
-              }`}
-              onClick={() => setUploadOption("link")}
-            >
-              🔗 Web Link
-            </button>
-          </div>
-
-          {/* Content Input Area */}
-          <div className={styles.inputSection}>
-            {uploadOption === "text" && (
-              <div className={styles.textInput}>
-                <textarea
-                  placeholder="Type or paste your text here..."
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  className={styles.textarea}
-                  rows={8}
-                />
-              </div>
-            )}
-
-            {uploadOption === "file" && (
-              <div className={styles.fileUpload}>
-                <input
-                  type="file"
-                  id="file-upload"
-                  onChange={handleFileUpload}
-                  className={styles.fileInput}
-                  accept=".txt,.doc,.docx,.pdf"
-                />
-                <label htmlFor="file-upload" className={styles.fileLabel}>
-                  📎 Choose File
-                </label>
-                {selectedFile && (
-                  <p className={styles.fileInfo}>
-                    Selected: {selectedFile.name}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {uploadOption === "drive" && (
-              <div className={styles.driveUpload}>
-                <button className={`${styles.btn} ${styles.btnOutline}`}>
-                  🔗 Connect Google Drive
-                </button>
-                <p className={styles.helpText}>
-                  Connect your Google Drive to access documents
-                </p>
-              </div>
-            )}
-
-            {uploadOption === "link" && (
-              <div className={styles.linkInput}>
-                <input
-                  type="url"
-                  placeholder="Paste website URL here..."
-                  className={styles.urlInput}
-                  onChange={(e) => setInputText(e.target.value)}
-                />
-                <button className={`${styles.btn} ${styles.btnPrimary}`}>
-                  📥 Fetch Content
-                </button>
-              </div>
-            )}
-          </div>
 
           {/* AI Tools */}
           <div className={styles.toolsSection}>
-            <h2>Select AI Tool</h2>
+            <h2>AI Tools</h2>
             <div className={styles.toolsGrid}>
               {features.map((feature) => (
                 <button
@@ -239,8 +187,7 @@ export default function AITools() {
                   className={`${styles.toolButton} ${
                     activeFeature === feature.id ? styles.active : ""
                   }`}
-                  onClick={() => handleFeatureClick(feature.id)}
-                  disabled={isLoading}
+                  onClick={() => setActiveFeature(feature.id)}
                 >
                   <span className={styles.toolIcon}>{feature.icon}</span>
                   <span className={styles.toolTitle}>{feature.title}</span>
@@ -250,28 +197,165 @@ export default function AITools() {
             </div>
           </div>
 
-          {/* Output Area */}
-          <div className={styles.outputSection}>
-            <h2>Output</h2>
-            <div className={styles.outputArea}>
-              {isLoading ? (
-                <div className={styles.loading}>
-                  <div className={styles.spinner}></div>
-                  <span>Processing with AI...</span>
+          {/* Chat Container */}
+          <div className={styles.chatContainer} ref={chatContainerRef}>
+            {messages.length === 0 ? (
+              <div className={styles.welcomeMessage}>
+                <h3>👋 Welcome to Smart-Doc AI!</h3>
+                <p>Start by:</p>
+                <ul>
+                  <li>📝 Typing a message below</li>
+                  <li>📁 Uploading a document</li>
+                  <li>🛠 Selecting an AI tool from above</li>
+                </ul>
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`${styles.message} ${
+                    message.sender === "user"
+                      ? styles.userMessage
+                      : styles.aiMessage
+                  }`}
+                >
+                  <div className={styles.messageHeader}>
+                    <span className={styles.sender}>
+                      {message.sender === "user" ? "You" : "AI Assistant"}
+                    </span>
+                    <span className={styles.timestamp}>
+                      {message.timestamp.toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <div className={styles.messageContent}>
+                    <p>{message.text}</p>
+                    {message.files && message.files.length > 0 && (
+                      <div className={styles.messageFiles}>
+                        <strong>Attachments:</strong>
+                        {message.files.map((file) => (
+                          <span key={file.name} className={styles.fileTag}>
+                            📄 {file.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className={styles.outputContent}>
-                  {outputText || "Select an AI tool to see the results here"}
+              ))
+            )}
+            {isLoading && (
+              <div className={styles.aiMessage}>
+                <div className={styles.messageHeader}>
+                  <span className={styles.sender}>AI Assistant</span>
                 </div>
-              )}
+                <div className={styles.messageContent}>
+                  <div className={styles.typingIndicator}>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Unified Input Area */}
+          <div className={styles.inputSection}>
+            {/* Selected Files */}
+            {selectedFiles.length > 0 && (
+              <div className={styles.selectedFiles}>
+                <strong>Attached files:</strong>
+                {selectedFiles.map((file) => (
+                  <span key={file.name} className={styles.fileTag}>
+                    📄 {file.name}
+                    <button
+                      onClick={() => removeFile(file.name)}
+                      className={styles.removeFileBtn}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Text Input Area */}
+            <div className={styles.inputContainer}>
+              <textarea
+                placeholder="Type your message, paste text, or describe what you want to do with your documents..."
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className={styles.textarea}
+                rows={3}
+              />
+
+              <div className={styles.inputActions}>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  className={styles.fileInput}
+                  accept=".txt,.doc,.docx,.pdf,.md"
+                  multiple
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className={styles.attachButton}
+                  title="Attach files"
+                >
+                  📎
+                </button>
+
+                {messages.length > 0 && (
+                  <button
+                    onClick={clearConversation}
+                    className={styles.clearButton}
+                    title="Clear conversation"
+                  >
+                    🗑
+                  </button>
+                )}
+
+                <button
+                  onClick={handleSendMessage}
+                  disabled={
+                    isLoading ||
+                    (!inputText.trim() && selectedFiles.length === 0)
+                  }
+                  className={styles.sendButton}
+                >
+                  {isLoading ? "⏳" : "🚀"} Send
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className={styles.quickActions}>
+              <span>Quick actions: </span>
+              <button
+                onClick={() => setInputText("Can you summarize this document?")}
+              >
+                Summarize
+              </button>
+              <button
+                onClick={() =>
+                  setInputText("Please check this for grammar errors:")
+                }
+              >
+                Grammar Check
+              </button>
+              <button
+                onClick={() =>
+                  setInputText("Suggest improvements for this text:")
+                }
+              >
+                Suggest Improvements
+              </button>
             </div>
           </div>
         </div>
       </main>
-
-      <footer className={styles.footer}>
-        <p>© 2025 DocMind AI. Own by NAK4S.</p>
-      </footer>
     </div>
   );
 }
