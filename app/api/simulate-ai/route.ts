@@ -1,80 +1,92 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import {
+  runAdvancedAIWorkflow,
+  getMemoryStats,
+  clearMemory,
+} from "../../../lib/advanced-ai-orchestrator";
+import { writeFile } from "fs/promises";
+import path from "path";
+import { randomUUID } from "crypto";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const UPLOAD_DIR = path.join(process.cwd(), "tmp");
 
 export async function POST(request: NextRequest) {
   try {
-    const { feature, text, uploadType } = await request.json();
+    const formData = await request.formData();
+    const input = formData.get("input") as string;
+    const files = formData.getAll("files") as File[];
+    const conversationHistory = JSON.parse(
+      (formData.get("conversationHistory") as string) || "[]"
+    );
+    const action = formData.get("action") as string;
 
-    if (!feature) {
-      return NextResponse.json(
-        { error: "Feature is required" },
-        { status: 400 }
-      );
+    // Handle special actions
+    if (action === "clear-memory") {
+      clearMemory();
+      return NextResponse.json({ success: true, message: "Memory cleared" });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: "OpenAI API key not configured" },
-        { status: 500 }
-      );
+    if (action === "memory-stats") {
+      const stats = getMemoryStats();
+      return NextResponse.json({ success: true, stats });
     }
 
-    // Different prompts based on upload type
-    const uploadContext: Record<string, string> = {
-      text: "the following text",
-      file: "the content from the uploaded file",
-      drive: "the document from Google Drive",
-      link: "the content from the web link",
-    };
+    if (!input && action !== "clear-memory" && action !== "memory-stats") {
+      return NextResponse.json({ error: "Input is required" }, { status: 400 });
+    }
 
-    const prompts: Record<string, string> = {
-      summarize: `Please summarize ${
-        uploadContext[uploadType || "text"]
-      } concisely while preserving the main points: ${text}`,
-      autocorrect: `Correct any grammar, spelling, and punctuation errors in ${
-        uploadContext[uploadType || "text"]
-      }. Maintain the original intent: ${text}`,
-      suggest: `Provide specific, actionable suggestions to improve ${
-        uploadContext[uploadType || "text"]
-      }. Format as a numbered list: ${text}`,
-      generate: `Based on ${
-        uploadContext[uploadType || "text"]
-      }, generate enhanced content: ${text}`,
-    };
+    // Save uploaded files temporarily
+    const filePaths: string[] = [];
+    for (const file of files) {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const filename = `${randomUUID()}-${file.name}`;
+      const filepath = path.join(UPLOAD_DIR, filename);
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a helpful AI assistant that processes documents and text.",
-        },
-        {
-          role: "user",
-          content: prompts[feature] || text,
-        },
-      ],
-      max_tokens: 1000,
-      temperature: 0.7,
-    });
+      await writeFile(filepath, buffer);
+      filePaths.push(filepath);
+    }
 
-    const result =
-      response.choices[0]?.message?.content || "No response generated.";
+    // Process with advanced LangGraph workflow
+    const result = await runAdvancedAIWorkflow(
+      input,
+      filePaths,
+      conversationHistory
+    );
+
+    // Clean up temporary files
+    for (const filepath of filePaths) {
+      // await unlink(filepath).catch(console.error);
+    }
+
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
+    }
 
     return NextResponse.json({
-      result,
+      response: result.response,
+      conversationHistory: result.conversationHistory,
+      taskType: result.taskType,
+      reasoningSteps: result.reasoningSteps,
+      similarContent: result.similarContent,
       success: true,
     });
   } catch (error) {
-    console.error("Error in simulate-ai API:", error);
+    console.error("API Error:", error);
     return NextResponse.json(
-      { error: "Failed to process request with AI" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
 }
