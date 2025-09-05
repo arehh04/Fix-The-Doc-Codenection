@@ -159,7 +159,7 @@ export default function AITools() {
       <header className={styles.header}>
         <Link href="/" className={styles.logo}>
           <span className={styles.logoIcon}>🧠</span>
-          <span>Smart-Doc AI</span>
+          <span>DocMind AI</span>
         </Link>
         <nav>
           <ul>
@@ -201,7 +201,7 @@ export default function AITools() {
           <div className={styles.chatContainer} ref={chatContainerRef}>
             {messages.length === 0 ? (
               <div className={styles.welcomeMessage}>
-                <h3>👋 Welcome to Smart-Doc AI!</h3>
+                <h3>👋 Welcome to DocMind AI!</h3>
                 <p>Start by:</p>
                 <ul>
                   <li>📝 Typing a message below</li>
