@@ -17,7 +17,7 @@ interface ChatSession {
   timestamp: Date;
 }
 
-export default function DocumentAssistant() {
+export default function DocMind() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,7 +25,7 @@ export default function DocumentAssistant() {
   const [fileContent, setFileContent] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([
-    { id: "1", title: "New Document Analysis", timestamp: new Date() },
+    { id: "1", title: "Document Analysis", timestamp: new Date() },
   ]);
   const [activeSession, setActiveSession] = useState<string>("1");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -151,6 +151,12 @@ export default function DocumentAssistant() {
     "Suggest improvements for this document",
   ];
 
+  // Function to get a random color from our theme
+  const getRandomColor = () => {
+    const colors = ["purple", "red", "orange", "blue", "green", "yellow"];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
   return (
     <div className={styles.container}>
       {/* Sidebar */}
@@ -159,7 +165,7 @@ export default function DocumentAssistant() {
       >
         <div className={styles.sidebarHeader}>
           <button onClick={createNewChat} className={styles.newChatButton}>
-            + New Chat
+            <span className={styles.plusIcon}>+</span> New Chat
           </button>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -170,7 +176,7 @@ export default function DocumentAssistant() {
         </div>
 
         <div className={styles.chatHistory}>
-          <h3>Chat History</h3>
+          <h3>Recent Chats</h3>
           {chatSessions.map((session) => (
             <div
               key={session.id}
@@ -179,10 +185,13 @@ export default function DocumentAssistant() {
               }`}
               onClick={() => setActiveSession(session.id)}
             >
-              <span className={styles.sessionTitle}>{session.title}</span>
-              <span className={styles.sessionTime}>
-                {session.timestamp.toLocaleDateString()}
-              </span>
+              <span className={styles.sessionIcon}>💬</span>
+              <div className={styles.sessionInfo}>
+                <span className={styles.sessionTitle}>{session.title}</span>
+                <span className={styles.sessionTime}>
+                  {session.timestamp.toLocaleDateString()}
+                </span>
+              </div>
             </div>
           ))}
         </div>
@@ -190,7 +199,7 @@ export default function DocumentAssistant() {
         <div className={styles.sidebarFooter}>
           <div className={styles.fileUploadArea}>
             <label htmlFor="file-upload" className={styles.uploadLabel}>
-              📎 Attach Document
+              <span className={styles.uploadIcon}>📎</span> Attach Document
             </label>
             <input
               id="file-upload"
@@ -200,7 +209,9 @@ export default function DocumentAssistant() {
               accept=".txt,.pdf,.doc,.docx,.md"
             />
             {fileName && (
-              <div className={styles.fileName}>Attached: {fileName}</div>
+              <div className={styles.fileName}>
+                <span className={styles.fileIcon}>📄</span> {fileName}
+              </div>
             )}
           </div>
         </div>
@@ -217,8 +228,8 @@ export default function DocumentAssistant() {
             ☰
           </button>
           <div className={styles.logo}>
-            <span className={styles.logoIcon}>📄</span>
-            <span>DocChat</span>
+            <span className={styles.logoIcon}>🧠</span>
+            <span>DocMind</span>
           </div>
           <button
             onClick={clearChat}
@@ -234,7 +245,7 @@ export default function DocumentAssistant() {
           {messages.length === 0 ? (
             <div className={styles.welcome}>
               <div className={styles.welcomeIcon}>✨</div>
-              <h1>Document Assistant</h1>
+              <h1>DocMind AI Assistant</h1>
               <p>
                 Upload a document or start chatting to get help with your
                 documents
@@ -244,20 +255,26 @@ export default function DocumentAssistant() {
               <div className={styles.examples}>
                 <h3>Try asking:</h3>
                 <div className={styles.exampleGrid}>
-                  {documentExamples.map((example, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setInput(example)}
-                      className={styles.exampleButton}
-                    >
-                      {example}
-                    </button>
-                  ))}
+                  {documentExamples.map((example, index) => {
+                    const color = getRandomColor();
+                    const colorClass = `exampleButton${
+                      color.charAt(0).toUpperCase() + color.slice(1)
+                    }`;
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => setInput(example)}
+                        className={`${styles.exampleButton} ${styles[colorClass]}`}
+                      >
+                        {example}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           ) : (
-            <div className={styles.chatContainer}>
+            <>
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -287,7 +304,7 @@ export default function DocumentAssistant() {
                   <div className={styles.messageAvatar}>🤖</div>
                   <div className={styles.messageContent}>
                     <div className={styles.typingIndicator}>
-                      <span>Thinking</span>
+                      <span>DocMind is thinking</span>
                       <div className={styles.typingDots}>
                         <span></span>
                         <span></span>
@@ -298,7 +315,7 @@ export default function DocumentAssistant() {
                 </div>
               )}
               <div ref={messagesEndRef} />
-            </div>
+            </>
           )}
         </main>
 
@@ -323,7 +340,7 @@ export default function DocumentAssistant() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Message DocChat..."
+                placeholder="Message DocMind..."
                 className={styles.input}
                 disabled={isLoading}
               />
@@ -332,12 +349,15 @@ export default function DocumentAssistant() {
                 disabled={!input.trim() || isLoading}
                 className={styles.sendButton}
               >
-                {isLoading ? "⏳" : "📤"}
+                {isLoading ? "⏳" : "🚀"}
               </button>
             </div>
             <div className={styles.helpText}>
               {fileName ? (
-                <p>Working with: {fileName}</p>
+                <p>
+                  Working with:{" "}
+                  <span className={styles.fileNameText}>{fileName}</span>
+                </p>
               ) : (
                 <p>
                   Ask about writing, editing, summarizing, or formatting

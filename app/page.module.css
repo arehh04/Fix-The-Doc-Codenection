@@ -2,42 +2,56 @@
   display: flex;
   height: 100vh;
   background: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
   position: relative;
 }
 
 /* Sidebar */
 .sidebar {
-  width: 280px;
-  background: #f8f9fa;
-  border-right: 1px solid #e5e7eb;
+  width: 300px;
+  background: linear-gradient(180deg, #6b46c1 0%, #553c9a 100%);
+  color: white;
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease;
   z-index: 100;
   position: relative;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .sidebarHeader {
-  padding: 1rem;
+  padding: 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .newChatButton {
-  padding: 0.5rem 1rem;
-  background: #007bff;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
   color: white;
-  border: none;
-  border-radius: 0.375rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
 }
 
 .newChatButton:hover {
-  background: #0056b3;
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.plusIcon {
+  font-size: 1.2rem;
+  font-weight: bold;
 }
 
 .closeSidebarButton {
@@ -46,73 +60,104 @@
   border: none;
   font-size: 1.25rem;
   cursor: pointer;
-  color: #6b7280;
+  color: white;
 }
 
 .chatHistory {
   flex: 1;
-  padding: 1rem;
+  padding: 1.5rem;
   overflow-y: auto;
 }
 
 .chatHistory h3 {
-  font-size: 0.875rem;
-  color: #6b7280;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
   margin-bottom: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 .chatSession {
-  padding: 0.75rem;
-  border-radius: 0.375rem;
-  margin-bottom: 0.5rem;
+  padding: 1rem;
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .chatSession:hover {
-  background: #e9ecef;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(5px);
 }
 
 .activeSession {
-  background: #e3f2fd;
+  background: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.sessionIcon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.sessionInfo {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .sessionTitle {
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin-bottom: 0.25rem;
 }
 
 .sessionTime {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .sidebarFooter {
-  padding: 1rem;
-  border-top: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .fileUploadArea {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .uploadLabel {
-  padding: 0.5rem 1rem;
-  background: #f3f4f6;
-  border: 1px dashed #d1d5db;
-  border-radius: 0.375rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
   cursor: pointer;
   text-align: center;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
 }
 
 .uploadLabel:hover {
-  background: #e5e7eb;
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.uploadIcon {
+  font-size: 1.1rem;
 }
 
 .fileInput {
@@ -120,11 +165,21 @@
 }
 
 .fileName {
-  font-size: 0.75rem;
-  color: #6b7280;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.fileIcon {
+  font-size: 0.9rem;
 }
 
 /* Main Content */
@@ -133,6 +188,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #ffffff;
 }
 
 /* Header */
@@ -141,8 +197,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e2e8f0;
   background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .menuButton {
@@ -151,33 +208,52 @@
   border: none;
   font-size: 1.25rem;
   cursor: pointer;
+  color: #4a5568;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.menuButton:hover {
+  background: #f7fafc;
 }
 
 .logo {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #374151;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #6b46c1;
+  background: linear-gradient(45deg, #6b46c1, #d53f8c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .logoIcon {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
+  background: linear-gradient(45deg, #6b46c1, #d53f8c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .clearButton {
   padding: 0.5rem 1rem;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.375rem;
-  color: #374151;
+  background: #f56565;
+  color: white;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
 }
 
 .clearButton:hover:not(:disabled) {
-  background: #e5e7eb;
+  background: #e53e3e;
+  transform: translateY(-2px);
 }
 
 .clearButton:disabled {
@@ -191,6 +267,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: #f7fafc;
 }
 
 .welcome {
@@ -201,74 +278,113 @@
   height: 100%;
   padding: 2rem;
   text-align: center;
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
 }
 
 .welcomeIcon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  animation: float 3s ease-in-out infinite;
 }
 
 .welcome h1 {
-  font-size: 1.875rem;
-  font-weight: 600;
-  color: #374151;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #2d3748;
   margin-bottom: 0.5rem;
+  background: linear-gradient(45deg, #6b46c1, #d53f8c, #dd6b20, #38a169);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .welcome p {
-  color: #6b7280;
-  margin-bottom: 2rem;
+  color: #718096;
+  margin-bottom: 2.5rem;
+  font-size: 1.1rem;
+  max-width: 500px;
 }
 
 /* Examples */
 .examples {
-  max-width: 500px;
+  max-width: 600px;
 }
 
 .examples h3 {
   font-size: 1rem;
-  color: #6b7280;
-  margin-bottom: 1rem;
-  font-weight: 500;
+  color: #4a5568;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
 }
 
 .exampleGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .exampleButton {
-  padding: 0.75rem 1rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  color: #374151;
+  padding: 1rem;
+  border: none;
+  border-radius: 12px;
   cursor: pointer;
   text-align: left;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   transition: all 0.2s;
+  font-weight: 500;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 .exampleButton:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.exampleButtonPurple {
+  background: linear-gradient(45deg, #9f7aea, #805ad5);
+  color: white;
+}
+
+.exampleButtonRed {
+  background: linear-gradient(45deg, #fc8181, #f56565);
+  color: white;
+}
+
+.exampleButtonOrange {
+  background: linear-gradient(45deg, #f6ad55, #ed8936);
+  color: white;
+}
+
+.exampleButtonBlue {
+  background: linear-gradient(45deg, #63b3ed, #4299e1);
+  color: white;
+}
+
+.exampleButtonGreen {
+  background: linear-gradient(45deg, #68d391, #48bb78);
+  color: white;
+}
+
+.exampleButtonYellow {
+  background: linear-gradient(45deg, #f6e05e, #ecc94b);
+  color: #744210;
 }
 
 /* Chat Container */
 .chatContainer {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
+  background: #f7fafc;
 }
 
 /* Messages */
 .message {
   display: flex;
-  gap: 0.75rem;
+  gap: 1rem;
   max-width: 100%;
 }
 
@@ -277,8 +393,19 @@
 }
 
 .messageAvatar {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #edf2f7;
+}
+
+.message.user .messageAvatar {
+  background: #ebf8ff;
 }
 
 .messageContent {
@@ -287,33 +414,39 @@
 
 .fileIndicator {
   font-size: 0.75rem;
-  color: #6b7280;
-  margin-bottom: 0.25rem;
+  color: #718096;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .messageText {
-  padding: 0.75rem 1rem;
-  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 18px;
   line-height: 1.5;
   word-wrap: break-word;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .message.user .messageText {
-  background: #007bff;
+  background: linear-gradient(45deg, #4299e1, #3182ce);
   color: white;
-  border-bottom-right-radius: 0.25rem;
+  border-bottom-right-radius: 4px;
 }
 
 .message.assistant .messageText {
-  background: #f3f4f6;
-  color: #374151;
-  border-bottom-left-radius: 0.25rem;
+  background: #ffffff;
+  color: #2d3748;
+  border: 1px solid #e2e8f0;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .messageTime {
   font-size: 0.75rem;
-  color: #9ca3af;
-  margin-top: 0.25rem;
+  color: #a0aec0;
+  margin-top: 0.5rem;
   text-align: right;
 }
 
@@ -326,7 +459,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #9ca3af;
+  color: #718096;
   font-style: italic;
 }
 
@@ -336,9 +469,9 @@
 }
 
 .typingDots span {
-  width: 0.375rem;
-  height: 0.375rem;
-  background: #9ca3af;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: #a0aec0;
   border-radius: 50%;
   animation: typing 1.4s infinite ease-in-out;
 }
@@ -368,9 +501,10 @@
 
 /* Footer - Input Area */
 .footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  border-top: 1px solid #e2e8f0;
   background: #ffffff;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .inputForm {
@@ -380,48 +514,74 @@
 .inputContainer {
   display: flex;
   gap: 0.75rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   align-items: center;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 0.5rem;
+  transition: all 0.2s;
+}
+
+.inputContainer:focus-within {
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
 }
 
 .attachButton {
   font-size: 1.25rem;
   cursor: pointer;
   position: relative;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+  color: #4a5568;
+}
+
+.attachButton:hover {
+  background: #edf2f7;
+  color: #2d3748;
 }
 
 .input {
   flex: 1;
-  padding: 0.75rem 1rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
+  padding: 0.75rem 0;
+  border: none;
   font-size: 1rem;
   outline: none;
+  background: transparent;
+  color: #2d3748;
 }
 
-.input:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+.input::placeholder {
+  color: #a0aec0;
 }
 
 .sendButton {
-  padding: 0.75rem 1rem;
-  background: #007bff;
+  padding: 0.75rem;
+  background: linear-gradient(45deg, #6b46c1, #805ad5);
   color: white;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 1.25rem;
   min-width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  animation: colorPulse 2s infinite;
 }
 
 .sendButton:hover:not(:disabled) {
-  background: #0056b3;
+  background: linear-gradient(45deg, #805ad5, #6b46c1);
+  transform: scale(1.05);
 }
 
 .sendButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  animation: none;
 }
 
 .helpText {
@@ -429,9 +589,14 @@
 }
 
 .helpText p {
-  font-size: 0.75rem;
-  color: #9ca3af;
+  font-size: 0.8rem;
+  color: #718096;
   margin: 0;
+}
+
+.fileNameText {
+  color: #6b46c1;
+  font-weight: 500;
 }
 
 /* Overlay for mobile */
@@ -447,7 +612,7 @@
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (max-width: 968px) {
   .container {
     height: 100vh;
   }
@@ -458,6 +623,7 @@
     left: 0;
     bottom: 0;
     transform: translateX(-100%);
+    width: 280px;
   }
 
   .sidebarOpen {
@@ -473,7 +639,7 @@
   }
 
   .header {
-    padding: 0.75rem 1rem;
+    padding: 1rem;
   }
 
   .menuButton {
@@ -481,15 +647,15 @@
   }
 
   .logo {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
   }
 
   .welcome {
-    padding: 1rem;
+    padding: 1.5rem;
   }
 
   .welcome h1 {
-    font-size: 1.5rem;
+    font-size: 2rem;
   }
 
   .exampleGrid {
@@ -501,7 +667,7 @@
   }
 
   .footer {
-    padding: 0.75rem 1rem;
+    padding: 1rem;
   }
 
   .inputContainer {
@@ -522,5 +688,13 @@
 
   .sessionTime {
     margin-top: 0;
+  }
+
+  .welcome h1 {
+    font-size: 1.75rem;
+  }
+
+  .welcomeIcon {
+    font-size: 3rem;
   }
 }

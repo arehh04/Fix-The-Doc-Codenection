@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DocMind AI | Intelligent Document Assistant",
-  description: "AI-powered tool for your document needs.",
+  title: "DocMind - AI Document Assistant",
+  description:
+    "AI-powered document assistant for writing, editing, and formatting",
 };
 
 export default function RootLayout({

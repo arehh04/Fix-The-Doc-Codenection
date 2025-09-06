@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
     const systemMessage = {
       role: "system",
       content: uploadedFileContent
-        ? `You are a helpful document assistant. The user has provided a file with the following content: ${uploadedFileContent}. Help users with document-related tasks including writing, editing, summarizing, formatting, and analyzing documents. Keep responses focused and practical.`
-        : "You are a helpful document assistant. Help users with document-related tasks including writing, editing, summarizing, formatting, and analyzing documents. Keep responses focused and practical.",
+        ? `You are DocMind, a helpful document assistant. The user has provided a file with the following content: ${uploadedFileContent}. Help users with document-related tasks including writing, editing, summarizing, formatting, and analyzing documents. Keep responses focused and practical.`
+        : "You are DocMind, a helpful document assistant. Help users with document-related tasks including writing, editing, summarizing, formatting, and analyzing documents. Keep responses focused and practical.",
     };
 
     const response = await openai.chat.completions.create({
