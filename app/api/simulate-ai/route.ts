@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Clean up temporary files
-    for (const filepath of filePaths) {
+    for (const _ of filePaths) {
       // await unlink(filepath).catch(console.error);
     }
 
