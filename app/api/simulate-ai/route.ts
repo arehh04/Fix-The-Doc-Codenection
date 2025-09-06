@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  runAdvancedAIWorkflow,
-  getMemoryStats,
-  clearMemory,
-} from "../../../lib/advanced-ai-orchestrator";
+import { runAdvancedAIWorkflow } from "../../../lib/advanced-ai-orchestrator";
 import { writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -22,15 +18,19 @@ export async function POST(request: NextRequest) {
 
     // Handle special actions
     if (action === "clear-memory") {
-      clearMemory();
-      return NextResponse.json({ success: true, message: "Memory cleared" });
+      return NextResponse.json(
+        { success: false, message: "Memory clear not implemented" },
+        { status: 501 }
+      );
     }
-
     if (action === "memory-stats") {
-      const stats = getMemoryStats();
-      return NextResponse.json({ success: true, stats });
+      // Memory stats endpoint is not available because the orchestrator
+      // does not export `getMemoryStats`.
+      return NextResponse.json(
+        { success: false, message: "Memory statistics not available" },
+        { status: 501 }
+      );
     }
-
     if (!input && action !== "clear-memory" && action !== "memory-stats") {
       return NextResponse.json({ error: "Input is required" }, { status: 400 });
     }
