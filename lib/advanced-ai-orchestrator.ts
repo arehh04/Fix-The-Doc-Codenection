@@ -1,6 +1,7 @@
 import { StateGraph, END } from "@langchain/langgraph";
+import { RunnableFunction } from "@langchain/core/runnables";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { ChatOllama } from "@langchain/community/chat_models/ollama-node";
+import { ChatOllama } from "@langchain/community/chat_models/ollama";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { readFile } from "fs/promises";
@@ -196,7 +197,7 @@ async function generateEmbeddings(state: AIState): Promise<Partial<AIState>> {
 }
 
 // Enhanced task classification with embeddings
-async function classifyTask(state: AIState): Promise<Partial<AIState>> {
+async function classifyTask(state: AIState): Promise<AIState> {
   const { input, fileContents, memoryContext: stateMemoryContext } = state;
   let taskType: AIState["taskType"] = "qa";
   const context = stateMemoryContext
@@ -265,7 +266,7 @@ async function classifyTask(state: AIState): Promise<Partial<AIState>> {
       taskType = "creative";
     }
   }
-  return { taskType };
+  return { ...state, taskType };
 }
 
 // Enhanced writing task with Pinecone context
@@ -452,8 +453,18 @@ function extractReasoningSteps(response: string): string[] {
 }
 
 // Creative task
-async function handleCreativeTask(state: AIState): Promise<Partial<AIState>> {
-  const { input, memoryContext, conversationHistory } = state;
+async function handleCreativeTask(state: AIState): Promise<AIState> {
+  const {
+    input,
+    memoryContext,
+    conversationHistory,
+    files,
+    fileContents,
+    taskType,
+    embeddings,
+    similarContent,
+    reasoningSteps,
+  } = state;
   const context = memoryContext ? `${memoryContext}\n\n` : "";
   const prompt = `You are a creative assistant. Use imagination and creativity to respond.\n${context}\nUser request: ${input}\nPlease provide a creative, original response:`;
   try {
@@ -465,12 +476,20 @@ async function handleCreativeTask(state: AIState): Promise<Partial<AIState>> {
       input: input.substring(0, 200),
     });
     return {
+      input,
+      files,
+      fileContents,
       response: `🎨 Creative Assistant:\n${response}`,
       conversationHistory: [
         ...conversationHistory,
         { role: "user", content: input },
         { role: "assistant", content: response },
       ],
+      taskType,
+      embeddings,
+      similarContent,
+      reasoningSteps,
+      memoryContext,
     };
   } catch (error) {
     console.error("Creative error:", error);
@@ -499,42 +518,48 @@ const aiStateSchema = z.object({
 });
 
 // Create the advanced LangGraph workflow with Pinecone
-const workflow = new StateGraph<AIState>();
+const workflow = new StateGraph(aiStateSchema);
 
-workflow.addNode("process_files", processFiles);
-workflow.addNode("generate_embeddings", generateEmbeddings);
-workflow.addNode("classify_task", classifyTask);
-workflow.addNode("handle_writing", handleWritingTask);
-workflow.addNode("handle_reading", handleReadingTask);
-workflow.addNode("handle_qa", handleQATask);
-workflow.addNode("handle_reasoning", handleReasoningTask);
-workflow.addNode("handle_creative", handleCreativeTask);
+workflow.addNode("__start__", RunnableFunction.from(processFiles));
+workflow.addNode(
+  "generate_embeddings",
+  RunnableFunction.from(generateEmbeddings)
+);
+workflow.addNode("classify_task", RunnableFunction.from(classifyTask));
+workflow.addNode("handle_writing", RunnableFunction.from(handleWritingTask));
+workflow.addNode("handle_reading", RunnableFunction.from(handleReadingTask));
+workflow.addNode("handle_qa", RunnableFunction.from(handleQATask));
+workflow.addNode(
+  "handle_reasoning",
+  RunnableFunction.from(handleReasoningTask)
+);
+workflow.addNode("handle_creative", RunnableFunction.from(handleCreativeTask));
 
 workflow.setEntryPoint("__start__");
-workflow.addEdge("__start__", "process_files");
-workflow.addEdge("process_files", "generate_embeddings");
+workflow.addEdge("__start__", "generate_embeddings");
 workflow.addEdge("generate_embeddings", "classify_task");
 
-workflow.addConditionalEdges({
-  source: "classify_task",
-  condition: (state: AIState) => state.taskType || "qa",
-  to: {
+workflow.addConditionalEdges(
+  "classify_task",
+  (state: AIState) => state.taskType || "qa",
+  {
     writing: "handle_writing",
     reading: "handle_reading",
     qa: "handle_qa",
     analysis: "handle_reading",
     reasoning: "handle_reasoning",
     creative: "handle_creative",
-  },
-});
+  }
+);
 
-workflow.addEdge({ from: "handle_writing", to: END });
-workflow.addEdge({ from: "handle_reading", to: END });
-workflow.addEdge({ from: "handle_qa", to: END });
-workflow.addEdge({ from: "handle_reasoning", to: END });
-workflow.addEdge({ from: "handle_creative", to: END });
+workflow.addEdge("handle_writing", END);
+workflow.addEdge("handle_reading", END);
+workflow.addEdge("handle_qa", END);
+workflow.addEdge("handle_reasoning", END);
+workflow.addEdge("handle_creative", END);
 
-const app = workflow.compile({ schema: aiStateSchema });
+const app = workflow.compile();
+const app = workflow.compile();
 
 // Export the run function
 export async function runAdvancedAIWorkflow(
@@ -544,9 +569,9 @@ export async function runAdvancedAIWorkflow(
 ) {
   try {
     const result = await app.invoke({
-      input: input,
-      files: files,
-      conversationHistory: conversationHistory,
+      input,
+      files,
+      conversationHistory,
     });
     return {
       success: true,
@@ -579,10 +604,9 @@ export async function getPineconeStats() {
     return { error: "Failed to get Pinecone stats" };
   }
 }
-
 export async function clearPineconeIndex() {
   try {
-    await index.delete({ deleteAll: true });
+    await index.deleteAll();
     return { success: true, message: "Pinecone index cleared" };
   } catch (error) {
     console.error("Pinecone clear error:", error);
