@@ -1,66 +1,79 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./page.module.css";
+
+type UploadedDocType = "notes" | "psq" | "reference";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-  fileAttached?: string;
 }
 
-interface ChatSession {
+interface UploadedDoc {
   id: string;
-  title: string;
-  timestamp: Date;
+  name: string;
+  type: UploadedDocType;
+  content: string;
 }
 
-export default function DocMind() {
+export default function MathStudyBuddy() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [fileContent, setFileContent] = useState<string>("");
-  const [fileName, setFileName] = useState<string>("");
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
-    { id: "1", title: "Document Analysis", timestamp: new Date() },
-  ]);
-  const [activeSession, setActiveSession] = useState<string>("1");
+  const [docType, setDocType] = useState<UploadedDocType>("notes");
+  const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([]);
+  const [ragPreview, setRagPreview] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const parseFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => resolve((event.target?.result as string) || "");
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsText(file);
+    });
+  };
 
-    setFileName(file.name);
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      setFileContent(content);
+    const parsedDocs: UploadedDoc[] = [];
 
-      // Add a system message about the uploaded file
-      const fileMessage: Message = {
-        id: Date.now().toString(),
+    for (const file of files) {
+      const text = await parseFileAsText(file);
+      parsedDocs.push({
+        id: crypto.randomUUID(),
+        name: file.name,
+        type: docType,
+        content: text,
+      });
+    }
+
+    setUploadedDocs((prev) => [...prev, ...parsedDocs]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
         role: "assistant",
-        content: `I've received your file "${file.name}". How would you like me to help with this document?`,
+        content: `Uploaded ${parsedDocs.length} file(s) as ${docType.toUpperCase()}. I will use these for retrieval in your next math question.`,
         timestamp: new Date(),
-        fileAttached: file.name,
-      };
+      },
+    ]);
 
-      setMessages((prev) => [...prev, fileMessage]);
-    };
-    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const removeDoc = (id: string) => {
+    setUploadedDocs((prev) => prev.filter((doc) => doc.id !== id));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,57 +81,54 @@ export default function DocMind() {
     if (!input.trim() || isLoading) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       role: "user",
       content: input,
       timestamp: new Date(),
-      fileAttached: fileName || undefined,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
     setInput("");
     setIsLoading(true);
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [
-            ...messages.map((msg) => ({
-              role: msg.role,
-              content: msg.content,
-            })),
-            { role: "user", content: input },
-          ],
-          fileContent: fileContent || undefined,
+          messages: nextMessages.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          })),
+          uploadedDocs,
         }),
       });
 
       const data = await response.json();
+      if (!data.success) throw new Error(data.error);
 
-      if (data.success) {
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
           role: "assistant",
           content: data.message,
           timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-      } else {
-        throw new Error(data.error);
-      }
+        },
+      ]);
+      setRagPreview(data.ragContextUsed || "");
     } catch (error) {
-      console.error("Error:", error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "Sorry, I encountered an error. Please try again.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      console.error(error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: "I hit an error. Please try again.",
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -126,175 +136,109 @@ export default function DocMind() {
 
   const clearChat = () => {
     setMessages([]);
-    setFileContent("");
-    setFileName("");
+    setRagPreview("");
   };
 
-  const createNewChat = () => {
-    const newId = (chatSessions.length + 1).toString();
-    const newSession: ChatSession = {
-      id: newId,
-      title: "New Chat",
-      timestamp: new Date(),
-    };
-    setChatSessions((prev) => [newSession, ...prev]);
-    setActiveSession(newId);
-    clearChat();
-  };
-
-  const documentExamples = [
-    "Summarize the key points of this document",
-    "Identify any grammatical errors in this text",
-    "Rewrite this content to be more professional",
-    "Convert this document to bullet points",
-    "What's the main argument in this text?",
-    "Suggest improvements for this document",
+  const prompts = [
+    "Solve: If 2x + 5 = 17, what is x?",
+    "Explain chain rule with one worked example.",
+    "From my PSQ, give me a 30-minute revision plan.",
+    "Turn these notes into a concise formula sheet.",
   ];
-
-  // Function to get a random color from our theme
-  const getRandomColor = () => {
-    const colors = ["purple", "red", "orange", "blue", "green", "yellow"];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
 
   return (
     <div className={styles.container}>
-      {/* Sidebar */}
-      <div
-        className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}
-      >
+      <div className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.sidebarHeader}>
-          <button onClick={createNewChat} className={styles.newChatButton}>
-            <span className={styles.plusIcon}>+</span> New Chat
+          <button onClick={clearChat} className={styles.newChatButton}>
+            <span className={styles.plusIcon}>↺</span> Reset Chat
           </button>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className={styles.closeSidebarButton}
-          >
+          <button onClick={() => setSidebarOpen(false)} className={styles.closeSidebarButton}>
             ✕
           </button>
         </div>
 
         <div className={styles.chatHistory}>
-          <h3>Recent Chats</h3>
-          {chatSessions.map((session) => (
-            <div
-              key={session.id}
-              className={`${styles.chatSession} ${
-                activeSession === session.id ? styles.activeSession : ""
-              }`}
-              onClick={() => setActiveSession(session.id)}
-            >
-              <span className={styles.sessionIcon}>💬</span>
+          <h3>Knowledge Base</h3>
+          <p className={styles.sessionTime}>Upload notes, PSQ, and references for RAG.</p>
+          {uploadedDocs.map((doc) => (
+            <div key={doc.id} className={styles.chatSession}>
+              <span className={styles.sessionIcon}>📄</span>
               <div className={styles.sessionInfo}>
-                <span className={styles.sessionTitle}>{session.title}</span>
-                <span className={styles.sessionTime}>
-                  {session.timestamp.toLocaleDateString()}
-                </span>
+                <span className={styles.sessionTitle}>{doc.name}</span>
+                <span className={styles.sessionTime}>{doc.type.toUpperCase()}</span>
               </div>
+              <button onClick={() => removeDoc(doc.id)} className={styles.removeDocButton}>✕</button>
             </div>
           ))}
         </div>
 
         <div className={styles.sidebarFooter}>
           <div className={styles.fileUploadArea}>
+            <select
+              value={docType}
+              onChange={(e) => setDocType(e.target.value as UploadedDocType)}
+              className={styles.docTypeSelect}
+            >
+              <option value="notes">Notes</option>
+              <option value="psq">PSQ</option>
+              <option value="reference">Reference</option>
+            </select>
             <label htmlFor="file-upload" className={styles.uploadLabel}>
-              <span className={styles.uploadIcon}>📎</span> Attach Document
+              <span className={styles.uploadIcon}>📤</span> Upload Files
             </label>
             <input
               id="file-upload"
               type="file"
+              multiple
+              accept=".txt,.md,.csv"
               onChange={handleFileUpload}
               className={styles.fileInput}
-              accept=".txt,.pdf,.doc,.docx,.md"
             />
-            {fileName && (
-              <div className={styles.fileName}>
-                <span className={styles.fileIcon}>📄</span> {fileName}
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className={styles.mainContent}>
-        {/* Header */}
         <header className={styles.header}>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className={styles.menuButton}
-          >
+          <button onClick={() => setSidebarOpen(true)} className={styles.menuButton}>
             ☰
           </button>
           <div className={styles.logo}>
-            <span className={styles.logoIcon}>🧠</span>
-            <span>DocMind</span>
+            <span className={styles.logoIcon}>📘</span>
+            <span>Math Study Buddy</span>
           </div>
-          <button
-            onClick={clearChat}
-            className={styles.clearButton}
-            disabled={messages.length === 0}
-          >
+          <button onClick={clearChat} className={styles.clearButton} disabled={messages.length === 0}>
             🗑 Clear
           </button>
         </header>
 
-        {/* Main Chat Area */}
         <main className={styles.main}>
           {messages.length === 0 ? (
             <div className={styles.welcome}>
-              <div className={styles.welcomeIcon}>✨</div>
-              <h1>DocMind AI Assistant</h1>
-              <p>
-                Upload a document or start chatting to get help with your
-                documents
-              </p>
-
-              {/* Example prompts */}
+              <div className={styles.welcomeIcon}>🧮</div>
+              <h1>Math Study Buddy (RAG + CoT + SFT)</h1>
+              <p>Upload notes/PSQ files, then ask math questions for grounded, stepwise support.</p>
               <div className={styles.examples}>
                 <h3>Try asking:</h3>
                 <div className={styles.exampleGrid}>
-                  {documentExamples.map((example, index) => {
-                    const color = getRandomColor();
-                    const colorClass = `exampleButton${
-                      color.charAt(0).toUpperCase() + color.slice(1)
-                    }`;
-                    return (
-                      <button
-                        key={index}
-                        onClick={() => setInput(example)}
-                        className={`${styles.exampleButton} ${styles[colorClass]}`}
-                      >
-                        {example}
-                      </button>
-                    );
-                  })}
+                  {prompts.map((prompt) => (
+                    <button key={prompt} onClick={() => setInput(prompt)} className={styles.exampleButton}>
+                      {prompt}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
           ) : (
-            <>
+            <div className={styles.chatContainer}>
               {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`${styles.message} ${styles[message.role]}`}
-                >
-                  <div className={styles.messageAvatar}>
-                    {message.role === "user" ? "👤" : "🤖"}
-                  </div>
+                <div key={message.id} className={`${styles.message} ${styles[message.role]}`}>
+                  <div className={styles.messageAvatar}>{message.role === "user" ? "👤" : "🤖"}</div>
                   <div className={styles.messageContent}>
-                    {message.fileAttached && (
-                      <div className={styles.fileIndicator}>
-                        📎 {message.fileAttached}
-                      </div>
-                    )}
                     <div className={styles.messageText}>{message.content}</div>
                     <div className={styles.messageTime}>
-                      {message.timestamp.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
                 </div>
@@ -302,80 +246,36 @@ export default function DocMind() {
               {isLoading && (
                 <div className={`${styles.message} ${styles.assistant}`}>
                   <div className={styles.messageAvatar}>🤖</div>
-                  <div className={styles.messageContent}>
-                    <div className={styles.typingIndicator}>
-                      <span>DocMind is thinking</span>
-                      <div className={styles.typingDots}>
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                      </div>
-                    </div>
-                  </div>
+                  <div className={styles.messageContent}>Math Study Buddy is reasoning...</div>
                 </div>
               )}
               <div ref={messagesEndRef} />
-            </>
+            </div>
           )}
         </main>
 
-        {/* Input Area */}
         <footer className={styles.footer}>
           <form onSubmit={handleSubmit} className={styles.inputForm}>
             <div className={styles.inputContainer}>
-              <label
-                htmlFor="file-upload-small"
-                className={styles.attachButton}
-              >
-                📎
-                <input
-                  id="file-upload-small"
-                  type="file"
-                  onChange={handleFileUpload}
-                  className={styles.fileInput}
-                  accept=".txt,.pdf,.doc,.docx,.md"
-                />
-              </label>
               <input
-                type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Message DocMind..."
+                placeholder="Ask a math question or request a revision plan..."
                 className={styles.input}
-                disabled={isLoading}
               />
-              <button
-                type="submit"
-                disabled={!input.trim() || isLoading}
-                className={styles.sendButton}
-              >
+              <button type="submit" disabled={!input.trim() || isLoading} className={styles.sendButton}>
                 {isLoading ? "⏳" : "🚀"}
               </button>
             </div>
             <div className={styles.helpText}>
-              {fileName ? (
-                <p>
-                  Working with:{" "}
-                  <span className={styles.fileNameText}>{fileName}</span>
-                </p>
-              ) : (
-                <p>
-                  Ask about writing, editing, summarizing, or formatting
-                  documents
-                </p>
-              )}
+              <p>{uploadedDocs.length} uploaded sources • Notes + PSQ retrieval enabled</p>
             </div>
+            {ragPreview && <pre className={styles.ragPreview}>{ragPreview}</pre>}
           </form>
         </footer>
       </div>
 
-      {/* Overlay for mobile when sidebar is open */}
-      {sidebarOpen && (
-        <div
-          className={styles.overlay}
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
+      {sidebarOpen && <div className={styles.overlay} onClick={() => setSidebarOpen(false)}></div>}
     </div>
   );
 }

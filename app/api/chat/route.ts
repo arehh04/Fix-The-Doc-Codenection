@@ -1,13 +1,111 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OpenAI } from "openai";
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+type UploadedStudyDoc = {
+  name: string;
+  type: "notes" | "psq" | "reference";
+  content: string;
+};
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length > 2);
+}
+
+function chunkText(text: string, chunkSize = 700): string[] {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return [];
+
+  const chunks: string[] = [];
+  for (let i = 0; i < normalized.length; i += chunkSize) {
+    chunks.push(normalized.slice(i, i + chunkSize));
+  }
+
+  return chunks;
+}
+
+function keywordOverlapScore(query: string, candidate: string): number {
+  const queryTokens = new Set(tokenize(query));
+  const candidateTokens = tokenize(candidate);
+
+  if (queryTokens.size === 0 || candidateTokens.length === 0) return 0;
+
+  let overlap = 0;
+  for (const token of candidateTokens) {
+    if (queryTokens.has(token)) overlap += 1;
+  }
+
+  return overlap / Math.sqrt(queryTokens.size * candidateTokens.length);
+}
+
+function buildRagContext(input: string, docs: UploadedStudyDoc[]): string {
+  const scored: { score: number; source: string; chunk: string }[] = [];
+
+  for (const doc of docs) {
+    const chunks = chunkText(doc.content);
+    for (const chunk of chunks) {
+      const score = keywordOverlapScore(input, chunk);
+      if (score > 0) {
+        scored.push({
+          score,
+          source: `${doc.type.toUpperCase()} • ${doc.name}`,
+          chunk,
+        });
+      }
+    }
+  }
+
+  const top = scored.sort((a, b) => b.score - a.score).slice(0, 5);
+  if (top.length === 0) {
+    return "No directly relevant uploaded context found.";
+  }
+
+  return top
+    .map(
+      (item, index) =>
+        `[${index + 1}] Source: ${item.source}\nSnippet: ${item.chunk}`
+    )
+    .join("\n\n");
+}
+
+function buildSystemPrompt(ragContext: string) {
+  return `You are Math Study Buddy, an FYP-ready assistant for university mathematics learners.
+
+Core behavior (SFT-style alignment):
+- Teach with patience, clarity, and strong mathematical correctness.
+- Focus on topics like calculus, algebra, statistics, discrete math, and numerical methods.
+- If needed, ask a short clarifying question before solving.
+- Always show concise, structured reasoning as a "Reasoning Outline" (do not reveal hidden chain-of-thought).
+- End with a short "What to practice next" recommendation.
+- If retrieved context conflicts with math rules, prioritize mathematical correctness and mention the conflict.
+
+RAG context from uploaded Notes / PSQ / references:
+${ragContext}
+
+Answer format:
+1) Final Answer
+2) Reasoning Outline
+3) What to practice next`;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { messages, fileContent: uploadedFileContent } = await request.json();
+    const { messages, uploadedDocs = [] } = (await request.json()) as {
+      messages?: ChatMessage[];
+      uploadedDocs?: UploadedStudyDoc[];
+    };
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -16,26 +114,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If file content is provided, prepend it to the conversation
-    const systemMessage = {
-      role: "system",
-      content: uploadedFileContent
-        ? `You are DocMind, a helpful document assistant. The user has provided a file with the following content: ${uploadedFileContent}. Help users with document-related tasks including writing, editing, summarizing, formatting, and analyzing documents. Keep responses focused and practical.`
-        : "You are DocMind, a helpful document assistant. Help users with document-related tasks including writing, editing, summarizing, formatting, and analyzing documents. Keep responses focused and practical.",
-    };
+    const latestUserMessage = [...messages]
+      .reverse()
+      .find((msg) => msg.role === "user")?.content;
+
+    const ragContext = latestUserMessage
+      ? buildRagContext(latestUserMessage, uploadedDocs)
+      : "No user query provided.";
 
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [systemMessage, ...messages],
-      max_tokens: 1000,
-      temperature: 0.7,
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: buildSystemPrompt(ragContext),
+        },
+        ...messages,
+      ],
+      max_tokens: 900,
+      temperature: 0.3,
     });
 
     return NextResponse.json({
       message:
         response.choices[0]?.message?.content ||
-        "Sorry, I couldn't generate a response.",
+        "I couldn't generate a response. Please try again.",
       success: true,
+      ragContextUsed: ragContext,
     });
   } catch (error) {
     console.error("API Error:", error);
